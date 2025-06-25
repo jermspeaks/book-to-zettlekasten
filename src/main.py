@@ -55,6 +55,12 @@ Examples:
     # Processing options
     parser.add_argument("--create-index", action="store_true",
                        help="Create an index note linking all generated notes")
+    parser.add_argument("--create-moc", action="store_true",
+                       help="Create or update a Map of Content (MOC) for the book")
+    parser.add_argument("--book-title", default="A Random Walk Down Wall Street",
+                       help="Title of the book for MOC creation")
+    parser.add_argument("--author", default="Burton G. Malkiel",
+                       help="Author of the book for MOC creation")
     parser.add_argument("--verbose", "-v", action="store_true",
                        help="Enable verbose output")
     
@@ -71,6 +77,9 @@ Examples:
             template_path=args.template,
             chapter_info=args.chapter,
             create_index=args.create_index,
+            create_moc=args.create_moc,
+            book_title=args.book_title,
+            author=args.author,
             verbose=args.verbose
         )
     except Exception as e:
@@ -88,6 +97,9 @@ def process_chapter(
     template_path: Optional[str] = None,
     chapter_info: Optional[str] = None,
     create_index: bool = False,
+    create_moc: bool = False,
+    book_title: str = "A Random Walk Down Wall Street",
+    author: str = "Burton G. Malkiel",
     verbose: bool = False
 ) -> dict:
     """
@@ -103,6 +115,9 @@ def process_chapter(
         template_path: Path to note template
         chapter_info: Chapter information for metadata
         create_index: Whether to create index note
+        create_moc: Whether to create/update Map of Content
+        book_title: Title of the book for MOC
+        author: Author of the book for MOC
         verbose: Enable verbose output
         
     Returns:
@@ -166,6 +181,13 @@ def process_chapter(
             if index_path:
                 log(f"Created index note: {index_path.name}")
         
+        # Optionally create/update Map of Content
+        moc_path = None
+        if create_moc:
+            moc_path = generator.create_book_moc(book_title, author, notes_data, chapter_info)
+            if moc_path:
+                log(f"Created/updated Map of Content: {moc_path.name}")
+        
     except Exception as e:
         raise Exception(f"Note generation failed: {e}")
     
@@ -177,7 +199,8 @@ def process_chapter(
         "notes_generated": len(notes_data),
         "files_created": created_files,
         "output_directory": output_dir,
-        "index_created": str(index_path) if index_path else None
+        "index_created": str(index_path) if index_path else None,
+        "moc_created": str(moc_path) if moc_path else None
     }
     
     print(f"\n✅ Success! Generated {len(notes_data)} atomic notes from pages {start_page}-{end_page}")

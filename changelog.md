@@ -6,6 +6,7 @@
 **Status:** ✅ Complete
 
 ### Overview
+
 This phase established the core pipeline functionality with PDF text extraction, LLM integration, and atomic note generation.
 
 ### Phase 1.1: Foundation and Setup (The Scaffolding)
@@ -37,6 +38,7 @@ pip freeze > requirements.txt
 ```
 
 **Configuration**:
+
 - Created `.env` file for API key management
 - Created `note_template.md` with placeholder content
 
@@ -47,6 +49,7 @@ pip freeze > requirements.txt
 **File**: `src/pdf_extractor.py`
 
 **Tasks Completed**:
+
 - ✅ Created function `extract_text_from_chapter(pdf_path, chapter_page_start, chapter_page_end)`
 - ✅ Used PyMuPDF to open PDF files
 - ✅ Implemented page range iteration
@@ -60,6 +63,7 @@ pip freeze > requirements.txt
 **File**: `src/llm_service.py`
 
 **Tasks Completed**:
+
 - ✅ Created function `get_atomic_notes_from_text(text_chunk)`
 - ✅ Multi-provider LLM support (OpenAI, Anthropic, Google)
 - ✅ Secure API key loading from environment
@@ -68,6 +72,7 @@ pip freeze > requirements.txt
 - ✅ Google API JSON cleaning (markdown code block removal)
 
 **Master Prompt Structure**:
+
 ```
 You are an AI expert in knowledge management, specifically the Zettelkasten and atomic note-taking method. Your task is to analyze the following text from the book...
 
@@ -85,6 +90,7 @@ Perform the following actions:
 **File**: `src/note_generator.py`
 
 **Tasks Completed**:
+
 - ✅ Created function `create_notes_from_data(notes_data, output_dir)`
 - ✅ Template loading and population system
 - ✅ Filename sanitization (`sanitize_filename()`)
@@ -99,6 +105,7 @@ Perform the following actions:
 **File**: `src/main.py`
 
 **Tasks Completed**:
+
 - ✅ Command-line interface with `argparse`
 - ✅ Multi-provider LLM support (`--provider` flag)
 - ✅ Custom template support (`--template` flag)
@@ -109,6 +116,7 @@ Perform the following actions:
 - ✅ Processing summary and statistics
 
 **CLI Features**:
+
 ```bash
 python main.py book.pdf -s START_PAGE -e END_PAGE -o OUTPUT_DIR --provider PROVIDER --verbose
 ```
@@ -141,16 +149,113 @@ python main.py ../data/A\ Random\ Walk\ Down\ Wall\ Street\ -\ Burton\ G.\ Malki
 ## Phase 2: Enhanced Knowledge Management System (In Progress)
 
 **Start Date:** 2025-06-25  
-**Status:** 🚧 Planning/Development
+**Status:** 🔄 67% Complete
+
+### Phase 2.1: Enhanced Note Structure & Metadata (✅ COMPLETED)
+
+**Implementation Date:** 2025-06-25
+
+**Key Achievements:**
+
+- ✅ **YAML Frontmatter Integration**: Added structured metadata to all notes
+  - `created`: Timestamp for note creation
+  - `in`: Bidirectional link to book's Map of Content
+  - `chapter`: Chapter information for organization
+  - `tags`: Structured tag array for categorization
+- ✅ **Capital Case Filename Convention**: Migrated from kebab-case to "Capital Case With Spaces.md"
+  - Implemented `capital_case_filename()` method in `note_generator.py`
+  - Added backward compatibility with legacy `sanitize_filename()`
+- ✅ **Enhanced Content Structure**: Added dedicated "Examples and Elaboration" section
+
+**Technical Implementation:**
+
+- Updated `note_template.md` with YAML frontmatter structure
+- Modified `NoteGenerator._create_single_note()` to support new template variables
+- Added datetime imports for timestamp generation
+
+### Phase 2.2: Map of Content (MOC) System (✅ COMPLETED)
+
+**Implementation Date:** 2025-06-25
+
+**Key Achievements:**
+
+- ✅ **Comprehensive MOC Creation**: Implemented `create_book_moc()` method
+  - Book metadata and overview section
+  - Key themes and structure analysis
+  - Chapter-specific note organization
+  - Related resources and navigation links
+- ✅ **CLI Integration**: Added command-line support
+  - `--create-moc`: Enable MOC creation/updates
+  - `--book-title`: Specify book title for metadata
+  - `--author`: Specify author for metadata
+- ✅ **Dynamic Content**: MOC automatically includes existing notes and updates
+
+**Technical Implementation:**
+
+- Added `create_book_moc()` method to `NoteGenerator` class
+- Integrated MOC creation into `main.py` workflow
+- Enhanced result tracking with `moc_created` field
+
+### Phase 2.3: Enhanced Content Extraction (✅ COMPLETED)
+
+**Implementation Date:** 2025-06-25
+
+**Key Achievements:**
+
+- ✅ **Examples and Elaboration**: Enhanced LLM prompts to extract:
+  - Specific examples and anecdotes from authors
+  - Real-world illustrations of concepts
+  - Detailed elaborations beyond basic summaries
+- ✅ **Enriched JSON Schema**: Extended response format to include "examples" field
+- ✅ **Template Integration**: Added `{{EXAMPLES}}` variable to note template
+
+**Technical Implementation:**
+
+- Updated `_build_analysis_prompt()` in `llm_service.py`
+- Enhanced JSON validation to require "examples" field
+- Modified template population in `note_generator.py`
+- Added fallback text for concepts without specific examples
+
+### Remaining Phase 2 Features (🚧 33% Pending)
+
+**2.4 Book Metadata Lookup (🚧 PENDING)**
+
+- Automatic retrieval of book information from external APIs
+- ISBN lookup and publication details
+- Enhanced MOC with retrieved metadata
+
+**2.5 Chapter Summary System (🚧 PENDING)**
+
+- Generate comprehensive chapter-level summaries
+- Connect chapter summaries to individual concept notes
+- Cross-chapter concept relationship mapping
+
+**2.6 Book Structure Analysis (🚧 PENDING)**
+
+- Hierarchical organization (Parts → Chapters → Concepts)
+- Thematic groupings and concept clusters
+- Enhanced navigation between structural elements
+
+### Phase 2 Technical Highlights
+
+- **Backward Compatibility**: All changes maintain compatibility with existing workflows
+- **Enhanced CLI**: New arguments integrate seamlessly with existing interface
+- **Template System**: Flexible variable substitution supports rich content
+- **MOC Architecture**: Comprehensive knowledge organization with automatic updates
+
+---
+
+## Phase 3: Advanced Features (Planned)
+
+**Planned Start Date:** TBD  
+**Status:** 📋 Planning
 
 ### Planned Enhancements
 
-- Enhanced note structure with YAML frontmatter
-- Map of Content (MOC) system for book organization
-- Chapter summary functionality
-- Book metadata lookup and integration
-- Template system improvements
-- Capital Case filename convention
-- Enhanced content with examples and elaboration
+- Batch processing for entire books
+- Vector embeddings for semantic linking
+- Real-time filesystem monitoring
+- Knowledge graph visualization
+- Iterative note refinement
 
-*Detailed Phase 2 progress will be documented as development continues...*
+_Phase 3 development will begin upon Phase 2 completion..._

@@ -161,30 +161,36 @@ Perform the following actions:
 
 1. Read the text and identify all distinct, core financial concepts, theories, or key terms.
 2. For each concept, write a concise, self-contained summary (an "atomic note").
-3. Within each summary, identify where other concepts you've found are mentioned and wrap their exact names in [[wikilinks]].
-4. Return the output as a single JSON array of objects, where each object represents a single atomic note and has three keys: "title", "summary", and "tags".
+3. Extract any specific examples, anecdotes, or elaborations the author provides for each concept.
+4. Within each summary, identify where other concepts you've found are mentioned and wrap their exact names in [[wikilinks]].
+5. Return the output as a single JSON array of objects, where each object represents a single atomic note and has four keys: "title", "summary", "examples", and "tags".
 
 Example JSON Output:
 [
   {{
     "title": "Random Walk Theory",
     "summary": "The Random Walk Theory posits that stock market prices evolve according to a random walk and thus cannot be predicted. This idea is a cornerstone of the [[Efficient Market Hypothesis]] and challenges the effectiveness of [[Technical Analysis]].",
-    "tags": ["market-theory", "stock-prices"]
+    "examples": "Burton Malkiel illustrates this with the famous dartboard experiment, where random stock picks by throwing darts at a board performed as well as professional analysts' recommendations. He also mentions that even blindfolded monkeys throwing darts could achieve similar results to Wall Street experts.",
+    "tags": ["market-theory", "stock-prices", "prediction"]
   }},
   {{
     "title": "Efficient Market Hypothesis",
     "summary": "The Efficient Market Hypothesis (EMH) asserts that financial markets are 'informationally efficient,' meaning prices fully reflect all available information. This theory is built upon the [[Random Walk Theory]].",
-    "tags": ["market-efficiency", "investment-theory"]
+    "examples": "The author explains how news about a company is immediately reflected in stock prices, making it impossible to consistently profit from public information. He cites studies showing that mutual fund managers rarely outperform market indices consistently.",
+    "tags": ["market-efficiency", "investment-theory", "information"]
   }}
 ]
 
 Guidelines:
 - Each note should be self-contained and understandable on its own
 - Use [[wikilinks]] to connect related concepts within summaries
+- Include specific examples, anecdotes, studies, or stories the author mentions
+- If no specific examples are provided for a concept, write "No specific examples provided in the source material."
 - Tags should be lowercase and use hyphens instead of spaces
 - Focus on the most important and distinct concepts
 - Avoid creating notes for very basic or common terms unless they're specifically defined in the text
 - Keep summaries concise but informative (2-4 sentences)
+- Make examples section detailed and engaging (2-5 sentences when examples exist)
 
 Now, analyze this text:
 
@@ -281,7 +287,7 @@ Now, analyze this text:
             if not isinstance(note, dict):
                 return False
             
-            required_keys = {"title", "summary", "tags"}
+            required_keys = {"title", "summary", "examples", "tags"}
             if not all(key in note for key in required_keys):
                 return False
             
@@ -289,6 +295,9 @@ Now, analyze this text:
                 return False
             
             if not isinstance(note["summary"], str) or not note["summary"].strip():
+                return False
+            
+            if not isinstance(note["examples"], str):
                 return False
             
             if not isinstance(note["tags"], list):

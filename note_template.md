@@ -1,12 +1,19 @@
+---
+created: {{CREATED}}
+in: "[[{{BOOK_TITLE}}]]"
+chapter: {{CHAPTER}}
+tags: [{{TAGS}}]
+---
+
 # {{TITLE}}
 
 ## Summary
 {{SUMMARY}}
 
----
+## Examples and Elaboration
+{{EXAMPLES}}
+
 ## Related Concepts
 {{LINKS}}
 
----
-**Source:** "A Random Walk Down Wall Street", Chapter {{CHAPTER}}
-**Tags:** #finance #investing {{TAGS}}
+**Source:** {{BOOK_TITLE}}, {{CHAPTER}}
