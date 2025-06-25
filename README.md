@@ -36,21 +36,20 @@ A Python-based system that processes PDF books, uses Large Language Models to id
 Process a chapter from a PDF book:
 
 ```bash
-cd src
-python main.py ../data/your-book.pdf --start-page 10 --end-page 25 --output ../notes/
+python src/main.py data/your-book.pdf --start-page 10 --end-page 25 --output notes/
 ```
 
 ### Advanced Usage
 
 ```bash
 # Use Anthropic Claude instead of OpenAI
-python main.py book.pdf -s 10 -e 25 -o notes/ --provider anthropic
+python src/main.py data/book.pdf -s 10 -e 25 -o notes/ --provider anthropic
 
 # Use custom template and create index
-python main.py book.pdf -s 10 -e 25 -o notes/ --template ../my_template.md --create-index
+python src/main.py data/book.pdf -s 10 -e 25 -o notes/ --template note_template.md --create-index
 
 # Add chapter information and verbose output
-python main.py book.pdf -s 10 -e 25 -o notes/ --chapter "Chapter 3" --verbose
+python src/main.py data/book.pdf -s 10 -e 25 -o notes/ --chapter "Chapter 3" --verbose
 ```
 
 ### API Keys

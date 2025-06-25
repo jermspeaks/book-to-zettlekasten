@@ -64,200 +64,69 @@ We will build the system with four distinct, modular components:
     - Call the other components in the correct sequence.
     - Provide feedback to the user (e.g., "Processing Chapter 5...", "Generated 15 notes.").
 
-## Step-by-Step Development Plan
+## Current Development Status
 
-This project is broken down into five distinct, buildable phases.
+✅ **Phase 1 Complete** - Core pipeline functionality implemented and working
+- PDF text extraction with PyMuPDF
+- Multi-LLM integration (OpenAI, Anthropic, Google)
+- Atomic note generation with wikilinks
+- CLI interface with comprehensive options
+- Template system and error handling
 
-### Phase 1: Foundation and Setup (The Scaffolding)
+📖 **Phase 1 Details** - See [changelog.md](changelog.md) for complete Phase 1 implementation history
 
-Project Structure: Create the initial folder layout:
+## Phase 2 Enhancements (Next Development Phase)
 
-```sh
-/book-to-zettelkasten/
-├── data/               # To store the input PDF
-├── notes/              # The output directory for markdown notes
-├── src/                # Source code directory
-│   ├── __init__.py
-│   ├── pdf_extractor.py
-│   ├── llm_service.py
-│   ├── note_generator.py
-│   └── main.py
-├── .env                # To store API key (add to .gitignore)
-├── requirements.txt
-└── note_template.md    # Template for new notes
-```
+With the core functionality now working, Phase 2 focuses on creating a more comprehensive knowledge management system:
 
-Environment: Set up a Python virtual environment and install initial dependencies:
+### 2.1 Enhanced Note Structure & Metadata
 
-Generated bash
-python -m venv venv
-source venv/bin/activate
-pip install PyMuPDF python-dotenv openai
-pip freeze > requirements.txt
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
+- **Frontmatter Integration**: Add YAML frontmatter to each note containing:
+  - `created`: Timestamp when note was created
+  - `in`: Link to the book's Map of Content note
+  - `chapter`: Chapter information from `--chapter` argument
+- **Filename Convention**: Change from kebab-case to "Capital Case With Spaces.md"
+- **Enhanced Content**: Include examples, anecdotal information, and author elaboration beyond basic summaries
 
-Configuration:
+### 2.2 Map of Content (MOC) System
 
-Create the .env file and add your LLM API key: OPENAI_API_KEY="sk-..."
+- **Book Index Note**: Create a master index note for each book containing:
+  - Book metadata (title, author, publication info)
+  - High-level summary of the book
+  - Links to all generated concept notes
+  - Book structure analysis (parts, chapters, themes)
+- **Book Metadata Lookup**: Implement automatic book information retrieval
+- **Chapter Organization**: Structure the MOC by chapters and themes
 
-Create the note_template.md file with placeholder content:
+### 2.3 Chapter Summary System
 
-Generated markdown
-# {{TITLE}}
+- **Chapter Summaries**: Generate comprehensive chapter summaries that:
+  - Connect to individual concept notes from that chapter
+  - Provide chapter-level context and themes
+  - Link to adjacent chapters for navigation
+- **Cross-Chapter Connections**: Identify concepts that span multiple chapters
 
-## Summary
-{{SUMMARY}}
+### 2.4 Book Structure Analysis
 
----
-## Related Concepts
-{{LINKS}}
+- **Hierarchical Organization**: Analyze and represent book structure:
+  - Parts/Sections → Chapters → Concepts
+  - Thematic groupings and concept clusters
+- **Navigation Enhancement**: Create bidirectional links between:
+  - Book → Chapters → Concepts
+  - Related concepts across chapters
 
----
-**Source:** "A Random Walk Down Wall Street", Chapter X
-**Tags:** #finance #investing #{{TAGS}}
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Markdown
-IGNORE_WHEN_COPYING_END
-Phase 2: PDF Text Extraction
+### 2.5 Template System Improvements
 
-Goal: Reliably extract text from a chapter of the book.
+- **Updated Note Template**:
+  - Add YAML frontmatter
+  - Remove unnecessary horizontal rules
+  - Include space for examples and elaboration
+  - Add "in" property linking to book MOC
+- **Dynamic Template Variables**: Support for book-specific metadata
 
-File: src/pdf_extractor.py
+## Future Enhancements & Feature Wishlist
 
-Tasks:
-
-Create a function extract_text_from_chapter(pdf_path, chapter_page_start, chapter_page_end).
-
-Use PyMuPDF to open the PDF.
-
-Iterate through the specified page range.
-
-Concatenate the text from each page into a single string.
-
-Perform basic text cleaning (e.g., remove excessive line breaks).
-
-Return the clean chapter text.
-
-Phase 3: Core LLM Logic & Prompt Engineering
-
-Goal: Send text to the LLM and get back a structured list of concepts.
-
-File: src/llm_service.py
-
-Tasks:
-
-Create a function get_atomic_notes_from_text(text_chunk).
-
-Load the API key from the .env file.
-
-The Master Prompt: This is the most critical step. Engineer a detailed system prompt.
-
-Example Master Prompt:
-
-You are an AI expert in knowledge management, specifically the Zettelkasten and atomic note-taking method. Your task is to analyze the following text from the book "A Random Walk Down Wall Street".
-
-Perform the following actions:
-
-Read the text and identify all distinct, core financial concepts, theories, or key terms.
-
-For each concept, write a concise, self-contained summary (an "atomic note").
-
-Within each summary, identify where other concepts you've found are mentioned and wrap their exact names in [[wikilinks]].
-
-Return the output as a single JSON object. The format should be an array of objects, where each object represents a single atomic note and has three keys: "title", "summary", and "tags".
-
-Example JSON Output:
-
-Generated json
-[
-  {
-    "title": "Random Walk Theory",
-    "summary": "The Random Walk Theory posits that stock market prices evolve according to a random walk and thus cannot be predicted. This idea is a cornerstone of the [[Efficient Market Hypothesis]] and challenges the effectiveness of [[Technical Analysis]].",
-    "tags": ["market-theory", "stock-prices"]
-  },
-  {
-    "title": "Efficient Market Hypothesis",
-    "summary": "The Efficient Market Hypothesis (EMH) asserts that financial markets are 'informationally efficient,' meaning prices fully reflect all available information. This theory is built upon the [[Random Walk Theory]].",
-    "tags": ["market-efficiency", "investment-theory"]
-  }
-]
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Json
-IGNORE_WHEN_COPYING_END
-
-Now, analyze this text:
-{text_chunk}
-
-In the function, make the API call using this prompt and parse the JSON response.
-
-Phase 4: Generating the Note Files
-
-Goal: Convert the LLM's JSON output into physical Markdown files.
-
-File: src/note_generator.py
-
-Tasks:
-
-Create a function create_notes_from_data(notes_data, output_dir).
-
-Load the note_template.md.
-
-Define a helper function sanitize_filename(title) that converts a title like "Random Walk Theory" to random-walk-theory.md.
-
-Loop through each JSON object in notes_data.
-
-For each note:
-
-Sanitize the title to create the filename.
-
-Populate the template: replace {{TITLE}}, {{SUMMARY}}, and {{TAGS}}.
-
-To generate the {{LINKS}} section, parse the summary for [[...]] patterns and create a bulleted list of these links.
-
-Save the new content to a .md file in the output_dir.
-
-Phase 5: Orchestration and Final Polish
-
-Goal: Tie everything together into a single, runnable script.
-
-File: src/main.py
-
-Tasks:
-
-Import the functions from the other modules.
-
-Use Python's argparse to create a simple CLI. The user should be able to specify the PDF path, output directory, and page range.
-
-Write the main execution block:
-
-Parse command-line arguments.
-
-Call extract_text_from_chapter() to get the text.
-
-Print status: "Text extracted, sending to LLM..."
-
-Call get_atomic_notes_from_text() to get the JSON data.
-
-Print status: "LLM analysis complete, generating notes..."
-
-Call create_notes_from_data() to write the files.
-
-Print final status: "Success! Generated X notes in the '/notes' directory."
-
-5. Future Enhancements & Feature Wishlist
-
-Once the core system is functional, we can add more advanced features:
+Once Phase 2 is complete, additional advanced features can include:
 
 Batch Processing: Add a feature to main.py to process the entire book by providing a table of contents (Chapter -> Page Range map).
 

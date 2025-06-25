@@ -58,28 +58,39 @@ class LLMService:
                 if not api_key:
                     raise ValueError("GOOGLE_API_KEY not found in environment variables")
                 genai.configure(api_key=api_key)
-                self.client = genai.GenerativeModel(self.model or "gemini-1.5-flash")
+                self.client = genai.GenerativeModel(self.model or "gemini-2.0-flash")
             except ImportError:
                 raise ImportError("google-generativeai library not installed. Run: pip install google-generativeai")
         
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
     
-    def get_atomic_notes_from_text(self, text_chunk: str, max_retries: int = 3) -> List[Dict]:
+    def get_atomic_notes_from_text(self, text_chunk: str, max_retries: int = 3, verbose: bool = False) -> List[Dict]:
         """
         Analyze text and extract atomic notes using LLM.
         
         Args:
             text_chunk: Text to analyze
             max_retries: Maximum number of retry attempts
+            verbose: Enable verbose logging
             
         Returns:
             List of atomic note dictionaries
         """
+        def log(message: str):
+            if verbose:
+                print(f"[LLM] {message}")
+        
+        log(f"Initializing analysis with {self.provider} ({self.model})")
+        log(f"Text length: {len(text_chunk)} characters")
+        
         prompt = self._build_analysis_prompt(text_chunk)
+        log(f"Prompt length: {len(prompt)} characters")
         
         for attempt in range(max_retries):
             try:
+                log(f"Attempt {attempt + 1}/{max_retries}: Querying {self.provider}...")
+                
                 if self.provider == "openai":
                     response = self._query_openai(prompt)
                 elif self.provider == "anthropic":
@@ -87,23 +98,55 @@ class LLMService:
                 elif self.provider == "google":
                     response = self._query_google(prompt)
                 
+                log(f"Received response ({len(response)} chars)")
+                
+                # Log first 200 chars of response for debugging
+                if verbose:
+                    preview = response[:200].replace('\n', '\\n')
+                    print(f"[LLM] Response preview: {preview}...")
+                
                 # Parse JSON response
-                notes_data = json.loads(response)
+                try:
+                    # Clean response - remove markdown code blocks if present
+                    cleaned_response = self._clean_json_response(response)
+                    notes_data = json.loads(cleaned_response)
+                    log(f"Successfully parsed JSON response")
+                except json.JSONDecodeError as json_err:
+                    log(f"JSON parsing failed: {json_err}")
+                    if verbose:
+                        print(f"[LLM] Raw response causing JSON error:")
+                        print(f"[LLM] {'='*50}")
+                        print(response)
+                        print(f"[LLM] {'='*50}")
+                        print(f"[LLM] Cleaned response:")
+                        print(f"[LLM] {'='*50}")
+                        print(cleaned_response if 'cleaned_response' in locals() else "Failed to clean")
+                        print(f"[LLM] {'='*50}")
+                    raise json_err
                 
                 # Validate the response structure
                 if self._validate_notes_data(notes_data):
+                    log(f"Response validation successful - {len(notes_data)} notes found")
                     return notes_data
                 else:
+                    log(f"Response validation failed - invalid structure")
+                    if verbose:
+                        print(f"[LLM] Invalid response structure:")
+                        print(f"[LLM] {json.dumps(notes_data, indent=2)[:500]}...")
                     raise ValueError("Invalid response structure from LLM")
                     
             except json.JSONDecodeError as e:
-                print(f"Attempt {attempt + 1}: Failed to parse JSON response - {e}")
+                print(f"[ERROR] Attempt {attempt + 1}: Failed to parse JSON response - {e}")
                 if attempt == max_retries - 1:
+                    print(f"[ERROR] Raw response that failed to parse:")
+                    print(f"[ERROR] {'='*60}")
+                    print(response if 'response' in locals() else "No response received")
+                    print(f"[ERROR] {'='*60}")
                     raise Exception(f"Failed to get valid JSON response after {max_retries} attempts")
                 time.sleep(2 ** attempt)  # Exponential backoff
                 
             except Exception as e:
-                print(f"Attempt {attempt + 1}: Error querying LLM - {e}")
+                print(f"[ERROR] Attempt {attempt + 1}: Error querying LLM - {e}")
                 if attempt == max_retries - 1:
                     raise Exception(f"Failed to get response from LLM after {max_retries} attempts: {e}")
                 time.sleep(2 ** attempt)
@@ -169,14 +212,65 @@ Now, analyze this text:
     
     def _query_google(self, prompt: str) -> str:
         """Query Google Generative AI API."""
-        response = self.client.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.7,
-                "max_output_tokens": 4000,
-            }
-        )
-        return response.text
+        try:
+            response = self.client.generate_content(
+                prompt,
+                generation_config={
+                    "temperature": 0.7,
+                    "max_output_tokens": 4000,
+                }
+            )
+            
+            # Check if response was blocked
+            if not response.text:
+                if hasattr(response, 'prompt_feedback'):
+                    feedback = response.prompt_feedback
+                    raise Exception(f"Google API blocked the request: {feedback}")
+                else:
+                    raise Exception("Google API returned empty response")
+            
+            return response.text
+            
+        except Exception as e:
+            # Log the specific Google API error
+            if hasattr(e, 'message'):
+                raise Exception(f"Google API error: {e.message}")
+            else:
+                raise Exception(f"Google API error: {str(e)}")
+    
+    def _clean_json_response(self, response: str) -> str:
+        """
+        Clean JSON response by removing markdown code blocks and other formatting.
+        
+        Args:
+            response: Raw response from LLM
+            
+        Returns:
+            Cleaned JSON string
+        """
+        # Remove markdown code blocks
+        if response.strip().startswith('```json'):
+            # Find the start and end of the JSON block
+            start_marker = '```json'
+            end_marker = '```'
+            
+            start_index = response.find(start_marker)
+            if start_index != -1:
+                start_index += len(start_marker)
+                end_index = response.find(end_marker, start_index)
+                if end_index != -1:
+                    response = response[start_index:end_index].strip()
+        
+        elif response.strip().startswith('```'):
+            # Handle generic code blocks
+            lines = response.strip().split('\n')
+            if len(lines) > 2 and lines[0].startswith('```') and lines[-1] == '```':
+                response = '\n'.join(lines[1:-1])
+        
+        # Remove any leading/trailing whitespace
+        response = response.strip()
+        
+        return response
     
     def _validate_notes_data(self, notes_data: Union[List, Dict]) -> bool:
         """Validate the structure of notes data from LLM."""
@@ -203,7 +297,7 @@ Now, analyze this text:
         return True
 
 
-def get_atomic_notes_from_text(text_chunk: str, provider: str = "openai", model: Optional[str] = None) -> List[Dict]:
+def get_atomic_notes_from_text(text_chunk: str, provider: str = "openai", model: Optional[str] = None, verbose: bool = False) -> List[Dict]:
     """
     Convenience function for getting atomic notes from text.
     
@@ -211,9 +305,10 @@ def get_atomic_notes_from_text(text_chunk: str, provider: str = "openai", model:
         text_chunk: Text to analyze
         provider: LLM provider to use
         model: Specific model to use
+        verbose: Enable verbose logging
         
     Returns:
         List of atomic note dictionaries
     """
     service = LLMService(provider=provider, model=model)
-    return service.get_atomic_notes_from_text(text_chunk)
+    return service.get_atomic_notes_from_text(text_chunk, verbose=verbose)
